@@ -4,23 +4,31 @@ format: html
 editor: Dewendt Teresa
 ---
 
-## Quarto
+## USO DE INTERNET MUNDIAL
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+**Hipótesis**: "En la última década (2013-2023), las regiones compuestas por países de ingresos bajos (Low income y Lower middle income) han mostrado una tasa de crecimiento porcentual en el acceso a internet superior a la de las regiones de ingresos altos (Upper middle income y High Income), aunque su penetración absoluta siga siendo significativamente menor."
 
-## Running Code
+**Para comprobar esto vamos a trabajar con**:
 
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+1.  **Indicadores de penetración de Internet** (internet_users_world_wide.csv).
+
+2.  **Metadatos de países** (metadata_countries_internet_users.csv).
+
+## PREPARACIÓN DEL ENTORNO
+
+Primero, cargamos los paquetes que vamos a utilizar. Usaremos la colección `tidyverse` para manipular los datos:
 
 ```{r}
-1 + 1
+library(tidyverse)
+library(readr)
+setwd('C:/Users/tessa/OneDrive/Documents/UDESA/7to Semestre/MANEJO Y VISUALIZACION DE DATOS/MVDADewendtTeresaTPs/TP1/data')
 ```
 
-You can add options to executable code like this
+Leemos las tablas con las que vamos a trabajar:
 
 ```{r}
-#| echo: false
-2 * 2
+uso_internet=read_csv("internet_users_world_wide.csv")
+paises=read_csv("metadata_countries_internet_users.csv")
 ```
 
 The `echo: false` option disables the printing of code (only output is displayed).
