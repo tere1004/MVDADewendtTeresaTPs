@@ -21,18 +21,20 @@ Primero, cargamos los paquetes que vamos a utilizar. Usaremos la colección `ti
 ```{r}
 library(tidyverse)
 library(readr)
-setwd('C:/Users/tessa/OneDrive/Documents/UDESA/7to Semestre/MANEJO Y VISUALIZACION DE DATOS/MVDADewendtTeresaTPs/TP1/data')
+library(janitor)
+
 ```
 
 Leemos las tablas con las que vamos a trabajar:
 
 ```{r}
-uso_internet=read_csv("internet_users_world_wide.csv")
-paises=read_csv("metadata_countries_internet_users.csv")
+uso_internet=read_csv("../data/internet_users_world_wide.csv")
+
+paises=read_csv("../data/metadata_countries_internet_users.csv")
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+Ahora debemos normalizar los nombres de las columnas.
 
 ```{r}
-
+glimpse()
 ```
