@@ -22,19 +22,168 @@ Primero, cargamos los paquetes que vamos a utilizar. Usaremos la colección `ti
 library(tidyverse)
 library(readr)
 library(janitor)
+library(dbplyr)
+library(tidyr)
 
 ```
 
 Leemos las tablas con las que vamos a trabajar:
 
 ```{r}
-uso_internet=read_csv("../data/internet_users_world_wide.csv")
+uso_internet=read_csv("../data/internet_users_world_wide.csv",skip=4)
 
 paises=read_csv("../data/metadata_countries_internet_users.csv")
 ```
 
-Ahora debemos normalizar los nombres de las columnas.
+Ahora debemos normalizar los nombres de las columnas, para ello primero debemos ver con cuáles variables trabajamos. Luego creamos una función que limpie nuestra base de datos, saca las columnas con NA.
 
 ```{r}
-glimpse()
+head(paises)
+head(uso_internet)
+```
+
+```{r}
+normalizacion = function(uso_internet, clean = TRUE, which = "cols") {
+  # Normalizacion
+  if (clean) {
+    data_clean = janitor::clean_names(uso_internet)
+  } else {
+    data_clean = uso_internet
+  }
+  
+  # Eliminacion de datos faltantes
+  if (which == "both") {
+    data_clean = data_clean |> 
+      janitor::remove_empty(which = 'cols') |> 
+      janitor::remove_empty(which = 'rows')
+  } else {
+    data_clean = janitor::remove_empty(data_clean, which = which)
+  }
+  
+  return(data_clean)
+}
+```
+
+```{r}
+uso_internet_clean = normalizacion(uso_internet, which='both')
+paises_clean = normalizacion(paises, which="both")
+
+```
+
+Ahora **estadarizamos los nombres** tanto del dataframe de países_clean como del dataframe de uso_internet_clean:
+
+```         
+```
+
+```{r}
+paises_clean= paises_clean  |>  
+  select(country_code,region,income_group,table_name) |> 
+  rename(
+    pais = table_name)
+```
+
+# **Pasamos de formato Wide a Long:**
+
+```         
+```
+
+```{r}
+
+internet_long <- uso_internet_clean %>%
+  select(country_name,country_code,indicator_name,indicator_code,x2013:x2023) %>%
+ pivot_longer(
+   cols = `x2013`:`x2023`,
+   names_to = "year",
+   values_to = "internet_users"
+ )  %>% mutate(year = as.numeric(sub("x","",year)))
+
+```
+
+# IDENTIFICACIÓN DE NA's Y ELIMINACIÓN
+
+```{r}
+internet_long %>%
+  summarise(
+    total_filas = n(),
+    nas_internet = sum(is.na(internet_users))
+  )
+
+```
+
+Tenemos dentro de este dataframe 462 Na's.
+
+```{r}
+internet_long <- internet_long %>%
+  drop_na(internet_users)
+
+```
+
+# LEFT JOIN
+
+```{r}
+internet_joined <- internet_long %>%
+left_join(paises_clean, by = "country_code")
+```
+
+# Hacemos group by y summarize para calcular el promedio de ingreso según región y año
+
+```{r}
+internet_income_year <- internet_joined %>%
+group_by(income_group, year,region,indicator_name) %>%
+summarise(
+avg_internet = mean(internet_users, na.rm = TRUE),
+.groups = "drop"
+)
+
+```
+
+# UTILIZAMOS FACTORES PARA ORDENAR
+
+Aca factorizamos los ingresos, y ordenamos en qué nivel de jerarquía queremos mostrarlos, con el arrange los ordenamos de menor a mayor.
+
+```{r}
+
+internet_joined$income_group = factor(
+internet_joined$income_group,
+levels = c(
+"Low income",
+"Lower middle income",
+"Upper middle income",
+"High income"))
+
+internet_joined = internet_joined %>%
+  arrange(income_group, year)
+```
+
+# EXPORTAMOS LA TABLA Y COMPARAMOS
+
+```{r}
+
+tabla_final= internet_joined %>% group_by(year, income_group, indicator_name)%>%
+summarize(
+internet_users = mean(internet_users, na.rm = TRUE)
+) %>%
+
+pivot_wider(
+names_from = income_group,
+values_from = internet_users
+) %>%
+
+select(
+year,
+`Low income`,
+`Lower middle income`,
+`Upper middle income`,
+`High income`,
+indicator_name
+)
+```
+
+```{r}
+dir.create("../output", showWarnings = FALSE) 
+
+file_name = file.path("../output", paste0("resultado_hipotesis.csv"))
+
+
+
 ```
