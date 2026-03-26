@@ -38,7 +38,7 @@ paises=read_csv("../data/metadata_countries_internet_users.csv")
 Ahora debemos normalizar los nombres de las columnas, para ello primero debemos ver con cuáles variables trabajamos. Luego creamos una función que limpie nuestra base de datos, saca las columnas con NA.
 
 ```{r}
-head(paises)
+head(paises) #Utilizamos Head para ver las primeras observaciones de cada dataframe
 head(uso_internet)
 ```
 
@@ -70,7 +70,7 @@ paises_clean = normalizacion(paises, which="both")
 
 ```
 
-Ahora **estadarizamos los nombres** tanto del dataframe de países_clean como del dataframe de uso_internet_clean:
+Ahora **estadarizamos los nombres** tanto del dataframe de países_clean:
 
 ```         
 ```
@@ -89,49 +89,51 @@ paises_clean= paises_clean  |>
 
 ```{r}
 
-internet_long <- uso_internet_clean %>%
+pivot_internet <- uso_internet_clean %>%
   select(country_name,country_code,indicator_name,indicator_code,x2013:x2023) %>%
  pivot_longer(
    cols = `x2013`:`x2023`,
-   names_to = "year",
-   values_to = "internet_users"
- )  %>% mutate(year = as.numeric(sub("x","",year)))
+   names_to = "años",
+   values_to = "internet_usuarios"
+ )  %>% mutate(años = as.numeric(sub("x","",años)))
 
 ```
 
 # IDENTIFICACIÓN DE NA's Y ELIMINACIÓN
 
 ```{r}
-internet_long %>%
+pivot_internet %>%
   summarise(
     total_filas = n(),
-    nas_internet = sum(is.na(internet_users))
+    nas_internet = sum(is.na(internet_usuarios))
   )
 
 ```
 
-Tenemos dentro de este dataframe 462 Na's.
+Tenemos dentro de este dataframe 462 Na's. Y ahora eliminamos con drop_na los NA's de pivot_internet
 
 ```{r}
-internet_long <- internet_long %>%
-  drop_na(internet_users)
+pivot_internet <- pivot_internet %>%
+  drop_na(internet_usuarios)
 
 ```
 
 # LEFT JOIN
 
+Hacemos un left join porque necesitamos unir los datos del uso de internet de pivot_internet con las regiones de el dataframe de paises_clean
+
 ```{r}
-internet_joined <- internet_long %>%
+datos_unidos <- pivot_internet %>%
 left_join(paises_clean, by = "country_code")
 ```
 
-# Hacemos group by y summarize para calcular el promedio de ingreso según región y año
+# Hacemos group by y summarize para calcular el promedio del uso de internet de acuerdo al  ingreso según región y año
 
 ```{r}
-internet_income_year <- internet_joined %>%
-group_by(income_group, year,region,indicator_name) %>%
+internet_ingresos_año <- datos_unidos %>%
+group_by(income_group, años,region,indicator_name) %>%
 summarise(
-avg_internet = mean(internet_users, na.rm = TRUE),
+promedio_internet = mean(internet_usuarios, na.rm = TRUE),
 .groups = "drop"
 )
 
@@ -143,34 +145,35 @@ Aca factorizamos los ingresos, y ordenamos en qué nivel de jerarquía queremos 
 
 ```{r}
 
-internet_joined$income_group = factor(
-internet_joined$income_group,
+datos_unidos$income_group = factor(
+datos_unidos$income_group,
 levels = c(
 "Low income",
 "Lower middle income",
 "Upper middle income",
 "High income"))
 
-internet_joined = internet_joined %>%
-  arrange(income_group, year)
+datos_unidos = datos_unidos %>%
+  arrange(income_group, años)
 ```
 
 # EXPORTAMOS LA TABLA Y COMPARAMOS
 
 ```{r}
 
-tabla_final= internet_joined %>% group_by(year, income_group, indicator_name)%>%
+resultado_hipotesis= datos_unidos %>% group_by(años,income_group, 
+                                         indicator_name)%>%
 summarize(
-internet_users = mean(internet_users, na.rm = TRUE)
+internet_usuarios = mean(internet_usuarios, na.rm = TRUE)
 ) %>%
 
 pivot_wider(
 names_from = income_group,
-values_from = internet_users
+values_from = internet_usuarios
 ) %>%
 
 select(
-year,
+años,
 `Low income`,
 `Lower middle income`,
 `Upper middle income`,
@@ -179,11 +182,12 @@ indicator_name
 )
 ```
 
+# EXPORTAMOS LOS DATOS A LA CARPETA OUTPUT
+
 ```{r}
-dir.create("../output", showWarnings = FALSE) 
 
-file_name = file.path("../output", paste0("resultado_hipotesis.csv"))
-
+file_name = file.path("../output", "resultado_hipotesis.csv")
+write.csv(resultado_hipotesis, file_name, row.names = FALSE)
 
 
 ```
