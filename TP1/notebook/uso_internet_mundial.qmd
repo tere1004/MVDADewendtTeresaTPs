@@ -191,3 +191,14 @@ write.csv(resultado_hipotesis, file_name, row.names = FALSE)
 
 
 ```
+
+```{r}
+# Creamos la carpeta output si no existe
+dir.create("../output", showWarnings = FALSE)
+
+# Definioms la ruta del archivo
+file_name <- file.path("../output", "resultado_hipotesis.csv")
+
+# Guardarmos el  archivo
+write.csv(resultado_hipotesis, file_name, row.names = FALSE)
+```
