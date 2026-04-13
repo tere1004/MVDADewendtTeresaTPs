@@ -127,7 +127,7 @@ datos_unidos <- pivot_internet %>%
 left_join(paises_clean, by = "country_code")
 ```
 
-# Hacemos group by y summarize para calcular el promedio del uso de internet de acuerdo al  ingreso según región y año
+# Hacemos group by y summarize para calcular el promedio del uso de internet de acuerdo al ingreso según región y año
 
 ```{r}
 internet_ingresos_año <- datos_unidos %>%
