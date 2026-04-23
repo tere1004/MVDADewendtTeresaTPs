@@ -23,19 +23,19 @@ source(here("TP2/scripts/metrics_figures.R"))
 
 # Estructura del proyecto
 
-/TP2/data: Carpeta destinada a almacenar:
+**/TP2/data**: Carpeta destinada a almacenar:
 
 -   Archivos .html descargados desde la página oficial de la OEA.
 
 -   Archivo .rds con la base tabular original obtenida mediante scraping.
 
-/TP2/outputCarpeta donde se guardaron los productos finales del análisis:
+**/TP2/output**: Carpeta donde se guardaron los productos finales del análisis:
 
 -   Archivo .rds con el texto procesado.
 
 -   Figura frecuencia_terminos.png.
 
-/TP2/scripts: Contiene tres scripts principales.
+**/TP2/scripts**: Contiene tres scripts principales.
 
 **scraping_oea.R.** Script encargado de:
 
@@ -65,9 +65,9 @@ source(here("TP2/scripts/metrics_figures.R"))
 
 -   Generación del gráfico final.
 
-/TP2/notebooks: Contiene este informe en formato Quarto.
+**/TP2/notebooks**: Contiene este informe en formato Quarto.
 
-# Intención del análisis
+# Análisis: 
 
 Se seleccionaron cinco términos considerados conceptualmente relevantes para el rol institucional de la OEA:
 
@@ -81,7 +81,7 @@ Se seleccionaron cinco términos considerados conceptualmente relevantes para el
 
 5.  seguridad
 
-Estos conceptos representan áreas centrales de acción del organismo: defensa democrática, observación electoral, promoción de derechos, cooperación internacional, seguridad hemisférica. **El objetivo** fue identificar cuál de estas dimensiones recibió mayor énfasis en los comunicados oficiales del período analizado.
+Estos conceptos representan áreas centrales de acción del organismo las cuales abarcan defensa democrática, observación electoral, promoción de derechos, cooperación internacional, seguridad hemisférica. **El objetivo** fue identificar cuál de estas dimensiones recibió mayor énfasis en los comunicados oficiales del período analizado.
 
 # Resultados
 
@@ -89,7 +89,7 @@ Estos conceptos representan áreas centrales de acción del organismo: defensa d
 
 ![](images/frecuencia_terminos.png)
 
-Aca podemos observar que:
+Acá podemos observar que:
 
 **derecho** es el término más frecuente, con amplia diferencia respecto del resto. Esto sugiere que durante el período analizado la OEA puso especial énfasis en cuestiones vinculadas a los derechos humanos, Estado de derecho, justicia institucional y marcos normativos.
 
@@ -97,14 +97,10 @@ Aca podemos observar que:
 
 **democracia** presenta una frecuencia intermedia. Aunque es un valor central de la organización, en estos meses tuvo menor presencia explícita que derechos y seguridad.
 
-**multilateralismo r**egistra pocas menciones. Esto puede deberse a que la cooperación internacional está implícita en muchos comunicados, aunque no siempre nombrada directamente.
+**multilateralismo** registra pocas menciones. Esto puede deberse a que la cooperación internacional está implícita en muchos comunicados, aunque no siempre nombrada directamente.
 
 **elecciones** es el término menos frecuente. Posiblemente porque en esos meses no hubo una concentración importante de procesos electorales observados por la OEA.
 
 # Conclusión
 
-El análisis textual sugiere que, entre enero y abril de 2026, la comunicación institucional de la OEA estuvo más orientada hacia temas de derechos y seguridad, mientras que conceptos como democracia electoral y multilateralismo tuvieron una presencia menor.
-
-Esto permite inferir que la agenda del organismo durante ese período estuvo enfocada principalmente en responder a desafíos jurídicos, institucionales y de seguridad regional, más que en procesos electorales específicos.
-
-Asimismo, el trabajo demuestra cómo técnicas de web scraping, procesamiento de texto y visualización de datos permiten transformar documentos institucionales en evidencia empírica útil para el análisis político.
+El análisis textual sugiere que, entre enero y abril de 2026, la comunicación institucional de la OEA estuvo más orientada hacia temas de derechos y seguridad, mientras que conceptos como democracia electoral y multilateralismo tuvieron una presencia menor. Esto permite inferir que la agenda del organismo durante ese período estuvo enfocada principalmente en responder a desafíos jurídicos, institucionales y de seguridad regional, más que en procesos electorales específicos. Asimismo, el trabajo demuestra cómo técnicas de *web scraping,* procesamiento de texto y visualización de datos permiten transformar documentos institucionales en evidencia empírica útil para el análisis político.
