@@ -99,31 +99,6 @@ scrapear_oea <- function(url, first_page=FALSE) {
     )
 }
 
-  # # Si es la primera primera página, sabemos que las primeras 4 noticias no tien
-  # # en resumen
-  # final <- length(titulos)
-  # inicio <- 1
-# 
-#   # Retornamos un tibble
-#   if (first_page){
-#     return(
-#       tibble(
-#         titulo = titulos[inicio:(inicio+final-1)],
-#         url = urls[inicio:(inicio+final-1)],
-#         cuerpos = cuerpo[1:final],
-#         fecha_raw = fechas[inicio:(inicio+final-1)]
-#       )
-#     )} else {
-#       tibble(
-#         titulo = titulos[1:(final)],
-#         url = urls[1:(final)],
-#         cuerpos = cuerpo [1:(final)],
-#         fecha_raw = fechas[1:(final)]
-#       )
-#     }
-# }
-
-
 
 
 
@@ -234,15 +209,6 @@ cuerpos_noticias_oea <- noticias_oea |>
   ) |>
   select(id, cuerpo)
 
-# Guardamos esta tabla por separado para ahorrar memoria y 
-#no tener que volver a hacer scraping cada vez que queramos analizar el texto
-
-# Le asignamos la misma fecha de descarga que el dataset original por consistencia
-attr(cuerpos_noticias_oea, "fecha_descarga") <- pagina_html |> attr("fecha_descarga")
-
-cuerpos_noticias_oea |> write_rds(
-  file.path(data_dir, "cuerpos_noticias_oea")
-)
 
 
 #AHORA UNIMOS TODO: 
@@ -252,7 +218,15 @@ noticias_oea <- noticias_oea |>
   select(id, titulo, cuerpo)
 
 
+# Guardamos esta tabla por separado para ahorrar memoria y 
+#no tener que volver a hacer scraping cada vez que queramos analizar el texto
 
+# Le asignamos la misma fecha de descarga que el dataset original por consistencia
+attr(noticias_oea, "fecha_descarga") <- pagina_html |> attr("fecha_descarga")
+
+noticias_oea |> write_rds(
+  file.path(data_dir, "noticias_oea.rds")
+)
 
 
 
