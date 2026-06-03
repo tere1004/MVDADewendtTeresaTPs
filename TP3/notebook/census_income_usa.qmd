@@ -83,7 +83,7 @@ census_data <- census_data %>% mutate (
  
 ```
 
-# **SELECCIÓN DE VARIABLES:** 
+# **SELECCIÓN DE VARIABLES:**
 
 Las variables que vamos a utilizar:
 
@@ -91,21 +91,9 @@ Las variables que vamos a utilizar:
 census_data_nueva <- census_data %>% select (education_num,occupation, marital_status,hours_per_week, income_binaria, age, sex) 
 
 
-table(census_data_nueva$education_num)
-census_data_nueva$education_num  %>% density (na.rm=T) %>% plot (.,
-           main = "distribucion de la educ",
-           xlab="")
-
-census_data_nueva$education_num  %>% density (na.rm=T) %>% plot (.,
-           main = "distribucion de la educ",
-           xlab="")
-
-census_data_nueva$education_num  %>% density (na.rm=T) %>% plot (.,
-           main = "distribucion de la educ",
-           xlab="")
 ```
 
-# TRANSFORMACIÓN DE VARIABLES: 
+# TRANSFORMACIÓN DE VARIABLES:
 
 ```{r}
 census_data_nueva <- census_data_nueva %>% mutate ( married = ifelse(marital_status %in%
@@ -169,11 +157,13 @@ El criterio fundamental para decidir si debemos aplicar una transformación a lo
 
 En regresión logística, miramos cómo se distribuyen las variables independientes en función de las categorías de nuestra variable dependiente, y cómo se relacionan las variables independientes entre sí.
 
-educacion
+Las variables que vamos a ver son:
 
-edad
+-   educacion
 
-horas de trabajo
+-   edad
+
+-   horas de trabajo
 
 ```{r}
 
@@ -253,7 +243,7 @@ print(p_education)
 
 ```
 
-# JUSTIFICACIÓN PARA LA TRANSFORMACIÓN E INTERACCIÓN: 
+# JUSTIFICACIÓN PARA LA TRANSFORMACIÓN E INTERACCIÓN:
 
 A partir del análisis exploratorio de los datos, se optó por recodificar algunas variables continuas en categorías discretas con el fin de mejorar la interpretación sustantiva de los coeficientes del modelo logístico. Esta estrategia permite analizar diferencias entre grupos socialmente relevantes y facilita la discusión de los resultados.
 
@@ -306,7 +296,7 @@ census_data_nueva <- census_data_nueva %>% mutate (educ_baja = ifelse(education_
 
 # INTERACCIÓN: GENDER\*HOURS_PER_WEEK
 
-Se incorpora un término de interacción entre las horas trabajadas por semana y el sexo del individuo. Desde la teoría económica, el llamado 'overwork premium' opera de forma asimétrica: en los hombres, trabajar muchas horas se asocia más fuertemente a ingresos altos que en las mujeres, quienes enfrentan mayores restricciones de disponibilidad horaria por la carga de trabajo no remunerado. Un modelo puramente aditivo asumiría que la pendiente de horas es idéntica para ambos sexos, supuesto que la evidencia empírica y la teoría cuestionan. La interacción permite que ese efecto varíe según el género.
+Se incorpora un término de interacción entre las horas trabajadas por semana y el sexo del individuo. Esto debido a que desde la teoría económica, el llamado overwork premium opera de forma asimétrica en los hombres, trabajar muchas horas se asocia más fuertemente a ingresos altos que en las mujeres, quienes enfrentan mayores restricciones de disponibilidad horaria por la carga de trabajo no remunerado. Un modelo puramente aditivo asumiría que la pendiente de horas es idéntica para ambos sexos, supuesto que la evidencia empírica y la teoría cuestionan. La interacción permite que ese efecto varíe según el género.
 
 ```{r}
 # Creamos variable categórica de jornada laboral
@@ -321,8 +311,8 @@ census_data_nueva <- census_data_nueva |>
                             "Extendido", "Sobrecarga"))
   )
 
-# ----------------------------------------------------------
 # Gráfico de barras proporcional: jornada × ingreso, facetado por sexo
+
 p_interaccion_barras <- census_data_nueva |>
   ggplot(aes(x = jornada, fill = factor(income_binaria))) +
   geom_bar(position = "fill", alpha = 0.85, color = "white") +
@@ -383,7 +373,7 @@ La eleccion de las variables de referencias se basa en el argumento de que en el
 
 En cuanto a las horas trabajadas, la referencia es la jornada *part-time*, que representa el punto de partida más bajo en términos de dedicación laboral. Esto permite observar con claridad el efecto incremental de trabajar jornadas más extensas sobre la probabilidad de ingresos altos, algo especialmente relevante dado que esta variable forma parte del término de interacción con el sexo.
 
-Para el estado civil, se toma como referencia la categoría `married` por ser la más frecuente en el dataset y porque la literatura económica la asocia consistentemente a mayores niveles de ingreso, lo que la convierte en un punto de comparación sustantivamente relevante.
+Para el estado civil, se toma como referencia la categoría `married` por ser la más frecuente en el dataset y porque suele asociarse a mayores niveles de ingreso, lo que la convierte en un punto de comparación sustantivamente relevante.
 
 # MODELO BASE
 
@@ -412,7 +402,7 @@ modelo_1 <- glm(
 summary(modelo_1)
 ```
 
-# MODELO 2: 
+# MODELO 2:
 
 ```{r}
 modelo_2 <- glm(
@@ -455,7 +445,7 @@ summary(modelo_2)
 
 # INTERPRETACIÓN DE RESULTADOS Y EFECTOS MARGINALES
 
-# EFECTOS MARGINALES PROMEDIO (AME): 
+# EFECTOS MARGINALES PROMEDIO (AME):
 
 ```{r}
 
@@ -615,7 +605,9 @@ ggplot(df_plot_or, aes(y = reorder(term_clean, estimate), x = estimate)) +
   )
 ```
 
-# COMPARACIÓN GLOBAL DE MODELOS: 
+El gráfico de Odds Ratios es consistente con los resultados obtenidos en el Modelo 2 y facilita la visualización de la importancia relativa de cada variable. Los niveles educativos más altos destacan como los factores con mayor impacto sobre la probabilidad de obtener ingresos superiores a USD 50.000, especialmente la educación universitaria y terciaria incompleta. La categoría de posgrado, aunque no aparece en el gráfico debido a la magnitud de su efecto, también muestra una influencia muy importante. Por otro lado, pertenecer a los grupos de edad adulta joven, adulta o mayor se asocia con una mayor probabilidad de alcanzar ingresos elevados en comparación con los individuos más jóvenes, lo que refleja la relevancia de la trayectoria y experiencia laboral. Del mismo modo, trabajar jornadas completas, extendidas o con sobrecarga incrementa significativamente las posibilidades de formar parte del grupo de mayores ingresos. Las interacciones entre sexo masculino y horas trabajadas también presentan efectos positivos, indicando que el aumento de ingresos asociado a jornadas más largas es más pronunciado entre los hombres. En contraste, las categorías de personas divorciadas, separadas o viudas muestran menores probabilidades de alcanzar ingresos altos respecto de las personas casadas. En conclusión, los resultados del gráfico respaldan las conclusiones obtenidas previamente y muestran que la educación, la edad, la intensidad del trabajo y la combinación entre género y horas trabajadas son elementos clave para comprender las diferencias de ingresos dentro de la población analizada.
+
+# COMPARACIÓN GLOBAL DE MODELOS:
 
 ```{r}
 bind_rows(
@@ -649,12 +641,4 @@ bind_rows(
 
 > **Comparación del ajuste de los modelos**
 >
-> Para evaluar el desempeño de ambos modelos se compararon la Deviance Residual, el Pseudo-R² de McFadden y el AIC. En primer lugar, ambos modelos parten de la misma **Deviance Nula (21.820,6)**, ya que utilizan la misma variable dependiente y el mismo conjunto de observaciones.
->
-> Al incorporar los predictores, la **Deviance Residual** disminuye considerablemente en ambos casos, lo que indica que las variables seleccionadas explican una parte importante de la variación en los ingresos. Sin embargo, el **Modelo 2**, que incorpora la interacción entre sexo y horas trabajadas, presenta una Deviance Residual ligeramente menor (13.808,2) que el Modelo 1 (13.845,1), señal de un mejor ajuste a los datos.
->
-> El **Pseudo-R² de McFadden** también favorece al Modelo 2. Mientras que el Modelo 1 alcanza un valor de 0,366, el Modelo 2 obtiene 0,367. La mejora es pequeña, pero indica que la interacción aporta información adicional para explicar la probabilidad de obtener ingresos superiores a USD 50.000.
->
-> Finalmente, el criterio más útil para comparar ambos modelos es el **AIC**, donde valores más bajos indican un mejor equilibrio entre ajuste y complejidad. El Modelo 2 presenta un AIC de **13.844,2**, inferior al del Modelo 1 (**13.875,1**), lo que implica una mejora de aproximadamente **31 puntos**. Como regla general, diferencias superiores a 10 puntos suelen considerarse evidencia fuerte a favor del modelo con menor AIC.
->
-> En conjunto, estos resultados sugieren que el **Modelo 2 (Interactivo)** describe mejor los datos que el Modelo 1. Aunque la mejora en el poder explicativo es moderada, la interacción entre sexo y horas trabajadas contribuye de manera significativa a capturar patrones que el modelo base no logra representar, por lo que constituye la especificación preferida para el análisis.
+> > Estos resultados muestran que los dos explican una parte importante de las diferencias en los ingresos, ya que reducen considerablemente el error respecto al modelo nulo. Sin embargo, el Modelo 2, que incorpora la interacción entre sexo y horas trabajadas, presenta un desempeño ligeramente mejor, lo cual se observa en su menor Deviance Residual, su Pseudo-R² levemente superior y, especialmente, en su menor AIC. Por lo tanto, aunque las diferencias no son muy grandes, sugieren que incluir la interacción permite capturar información adicional sobre los ingresos que el Modelo 1 no logra explicar. Por esta razón, el Modelo 2 se considera la mejor especificación para el análisis.
