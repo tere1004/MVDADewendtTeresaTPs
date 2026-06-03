@@ -35,23 +35,626 @@ format:
         </style>
 ---
 
-## Quarto
+## PREPARACIÓN, CARGA Y LIMPIEZA DE DATOS.
 
-Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
-
-## Running Code
-
-When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+1.  INSTALAMOS LIBRERÍAS NECESARIAS
 
 ```{r}
-1 + 1
-```
+# Instalamos pacman si no está disponible para gestionar paquetes
+if (!require("pacman")) install.packages("pacman")
 
-You can add options to executable code like this
+# Cargamos todas las librerías requeridas para la sesión
+pacman::p_load(
+  tidyverse,        # Manipulación de datos (dplyr, tidyr) y visualización (ggplot2)
+ here,              #Manejo de rutas relativas al proyecto 
+  caret,            # Herramientas para partición de datos (train/test split)
+  scales,           # Formateo de ejes y etiquetas en gráficos (porcentajes, comas)
+  broom,            # Convertir outputs de modelos en dataframes (tidy, glance, augment)
+  modelsummary,     # Creación de tablas de regresión estilo publicación académica
+  kableExtra,       # decoración de tablas kable
+  marginaleffects,  # Cálculo de efectos marginales y predicciones 
+  yardstick,        # Métricas de evaluación de clasificación (ROC, AUC, Matriz de Confusión)
+  patchwork         # Organizar el apilado y composición de figuras
+)
+
+```
 
 ```{r}
-#| echo: false
-2 * 2
+install.packages("modelsummary")
+install.packages("caret", dependencies = TRUE)
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+Cargamos los datos utilizando HERE.
+
+```{r}
+# Carga de datos con here
+# here() construye la ruta relativa desde la raíz del proyecto .Rproj
+census_data <- read_csv(here("TP3", "data", "adult_census_USA.csv"))
+
+
+```
+
+# **REALIZAMOS EL MUTATE DE LA VARIABLE INCOME**
+
+```{r}
+census_data <- census_data %>% mutate ( 
+  income_binaria = ifelse (income == ">50K",1,0)
+  )
+ 
+```
+
+# **SELECCIÓN DE VARIABLES:** 
+
+Las variables que vamos a utilizar:
+
+```{r}
+census_data_nueva <- census_data %>% select (education_num,occupation, marital_status,hours_per_week, income_binaria, age, sex) 
+
+
+table(census_data_nueva$education_num)
+census_data_nueva$education_num  %>% density (na.rm=T) %>% plot (.,
+           main = "distribucion de la educ",
+           xlab="")
+
+census_data_nueva$education_num  %>% density (na.rm=T) %>% plot (.,
+           main = "distribucion de la educ",
+           xlab="")
+
+census_data_nueva$education_num  %>% density (na.rm=T) %>% plot (.,
+           main = "distribucion de la educ",
+           xlab="")
+```
+
+# TRANSFORMACIÓN DE VARIABLES: 
+
+```{r}
+census_data_nueva <- census_data_nueva %>% mutate ( married = ifelse(marital_status %in%
+                       c("Married-civ-spouse",
+                         "Married-AF-spouse"), 1,
+
+                     ifelse(marital_status %in%
+                              c("Never-married",
+                                "Divorced",
+                                "Separated",
+                                "Widowed",
+                                "Married-spouse-absent"), 0, NA)),
+
+    never_married = ifelse(marital_status == "Never-married", 1,
+
+                           ifelse(marital_status %in%
+                                    c("Married-civ-spouse",
+                                      "Married-AF-spouse",
+                                      "Divorced",
+                                      "Separated",
+                                      "Widowed",
+                                      "Married-spouse-absent"), 0, NA)),
+
+    div_sep = ifelse(marital_status %in%
+                       c("Divorced",
+                         "Separated"), 1,
+
+                     ifelse(marital_status %in%
+                              c("Married-civ-spouse",
+                                "Married-AF-spouse",
+                                "Never-married",
+                                "Widowed",
+                                "Married-spouse-absent"), 0, NA)),
+
+    widowed_other = ifelse(marital_status %in%
+                             c("Widowed",
+                               "Married-spouse-absent"), 1,
+
+                           ifelse(marital_status %in%
+                                    c("Married-civ-spouse",
+                                      "Married-AF-spouse",
+                                      "Never-married",
+                                      "Divorced",
+                                      "Separated"), 0, NA)))
+
+```
+
+# BALANCE DE DATOS DE NUESTRA VARIABLE OBJETIVO:
+
+Antes de estimar el modelo es importante verificar la distribución de la variable dependiente para asegurarnos de que no exista un desbalance severo entre las categorías. La variable objetivo presenta una distribución relativamente balanceada: el 52,4% de los individuos pertenece al estrato de ingresos bajos (≤\$50K) y el 47,6% al estrato de ingresos altos (\>\$50K). Dado que la diferencia entre clases es inferior al 5%, no se requiere ningún tratamiento adicional de balanceo de clases previo al ajuste del modelo.
+
+```{r}
+# Comprobamos el balance de nuestra variable objetivo
+message("Distribución de la variable objetivo (income_binaria):")
+print(table(census_data_nueva$income_binaria))
+```
+
+# ANÁLISIS EXPLORATORIO Y DECISIONES DE TRANSFORMACIÓN
+
+El criterio fundamental para decidir si debemos aplicar una transformación a los datos o incluir un término de interacción **no es correr modelos a ciegas**, sino **ver la distribución de los datos**.
+
+En regresión logística, miramos cómo se distribuyen las variables independientes en función de las categorías de nuestra variable dependiente, y cómo se relacionan las variables independientes entre sí.
+
+educacion
+
+edad
+
+horas de trabajo
+
+```{r}
+
+# Paleta de colores para income_binaria
+paleta_income <- c("0" = "#4e79a7", "1" = "#f28e2b")
+
+```
+
+```{r}
+
+# Edad vs Income (Density Plot)
+p_age <- census_data_nueva |>
+  ggplot(aes(x = age, fill = factor(income_binaria), color = factor(income_binaria))) +
+  geom_density(alpha = 0.5, linewidth = 0.8) +
+  scale_fill_manual(values = paleta_income, name = "Ingreso",
+                    labels = c("0" = "<=50K", "1" = ">50K")) +
+  scale_color_manual(values = paleta_income, name = "Ingreso",
+                     labels = c("0" = "<=50K", "1" = ">50K")) +
+  labs(
+    title = "Distribución por Edad",
+    x     = "Edad (años)",
+    y     = "Densidad"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title      = element_text(face = "bold", size = 15),
+    legend.position = "bottom"
+  )
+
+print(p_age)
+```
+
+```{r}
+# Horas por semana vs Income (Violin + Boxplot)
+p_hours <- census_data_nueva |>
+  ggplot(aes(x = factor(income_binaria), y = hours_per_week,
+             fill = factor(income_binaria), color = factor(income_binaria))) +
+  geom_violin(alpha = 0.3, linewidth = 0.5, width = 0.8) +
+  geom_boxplot(width = 0.2, alpha = 0.8, color = "gray20", outlier.shape = NA) +
+  scale_fill_manual(values = paleta_income, guide = "none") +
+  scale_color_manual(values = paleta_income, guide = "none") +
+  scale_x_discrete(labels = c("0" = "<=50K", "1" = ">50K")) +
+  labs(
+    title = "Horas Trabajadas por Semana",
+    x     = "Nivel de Ingreso",
+    y     = "Horas por semana"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(face = "bold", size = 15))
+
+print(p_hours)
+
+
+```
+
+```{r}
+# Education_num vs Income (Density Plot)
+p_education <- census_data_nueva |>
+  ggplot(aes(x = education_num, fill = factor(income_binaria), color = factor(income_binaria))) +
+  geom_density(alpha = 0.5, linewidth = 0.8) +
+  scale_fill_manual(values = paleta_income, name = "Ingreso",
+                    labels = c("0" = "<=50K", "1" = ">50K")) +
+  scale_color_manual(values = paleta_income, name = "Ingreso",
+                     labels = c("0" = "<=50K", "1" = ">50K")) +
+  labs(
+    title = "Distribución por Años de educación",
+    x     = "Años de educación",
+    y     = "Densidad"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title      = element_text(face = "bold", size = 15),
+    legend.position = "bottom"
+  )
+
+print(p_education)
+
+```
+
+# JUSTIFICACIÓN PARA LA TRANSFORMACIÓN E INTERACCIÓN: 
+
+A partir del análisis exploratorio de los datos, se optó por recodificar algunas variables continuas en categorías discretas con el fin de mejorar la interpretación sustantiva de los coeficientes del modelo logístico. Esta estrategia permite analizar diferencias entre grupos socialmente relevantes y facilita la discusión de los resultados.
+
+En primer lugar, la variable **edad** fue agrupada en categorías, jóvenes, adultos jóvenes, adultos y adultos mayores. Esta decisión se fundamenta en que la relación entre edad e ingresos suele estar asociada a la acumulación de experiencia, habilidades y trayectoria profesional, por lo que resulta más intuitivo comparar grupos etarios que asumir que cada año adicional produce el mismo efecto sobre la probabilidad de alcanzar ingresos elevados. Por otro lado, la variable **educativa** fue reorganizada en niveles de formación, educación baja, secundaria, terciaria incompleta, universitaria y posgrado. Este cambio supone que mayores niveles de educación incrementan la productividad de los individuos y, en consecuencia, sus oportunidades de acceder a empleos mejor remunerados. Asimismo, permite evaluar si existen diferencias sustantivas entre años educativos específicos. Por su parte, **las horas trabajadas** por semana fueron agrupadas en categorías que distinguen entre empleo de tiempo parcial, jornada completa estándar, jornada extendida y sobrecarga laboral. Esta clasificación busca capturar cómo distintos tipos de horas laborales tienen un sobre los ingresos.
+
+```{r}
+
+census_data_nueva <- census_data_nueva %>% mutate (educ_baja = ifelse(education_num %in% c(1:8), 1,
+                       ifelse(education_num %in% c(9:16), 0, NA)),
+
+    educ_secundaria = ifelse(education_num %in% c(9,10), 1,
+                             ifelse(education_num %in% c(c(1:8),11:16), 0, NA)),
+
+    educ_terc_inc = ifelse(education_num %in% c(11,12), 1,
+                           ifelse(education_num %in% c(c(1:10),13:16), 0, NA)),
+
+    educ_universitaria = ifelse(education_num == 13, 1,
+                                ifelse(education_num %in% c(1:12,14:16), 0, NA)),
+
+    educ_posgrado = ifelse(education_num %in% c(14:16), 1,
+                           ifelse(education_num %in% c(1:13), 0, NA)),
+   
+   edad_joven = ifelse(age >= 17 & age <= 29, 1,
+                        ifelse(age >= 30, 0, NA)),
+
+    edad_adulto_joven = ifelse(age >= 30 & age <= 44, 1,
+                               ifelse(age < 30 | age >= 45, 0, NA)),
+
+    edad_adulto = ifelse(age >= 45 & age <= 59, 1,
+                         ifelse(age < 45 | age >= 60, 0, NA)),
+
+    edad_mayor = ifelse(age >= 60, 1,
+                        ifelse(age < 60, 0, NA)), 
+    horas_part_time = ifelse(hours_per_week < 35, 1,
+                             ifelse(hours_per_week >= 35, 0, NA)),
+
+    horas_full_time = ifelse(hours_per_week >= 35 &
+                               hours_per_week <= 44, 1,
+                             ifelse(hours_per_week < 35 |
+                                      hours_per_week >= 45, 0, NA)),
+
+    horas_extendido = ifelse(hours_per_week >= 45 &
+                               hours_per_week <= 59, 1,
+                             ifelse(hours_per_week < 45 |
+                                      hours_per_week >= 60, 0, NA)),
+
+    horas_sobrecarga = ifelse(hours_per_week >= 60, 1,
+                              ifelse(hours_per_week < 60, 0, NA)))
+```
+
+# INTERACCIÓN: GENDER\*HOURS_PER_WEEK
+
+Se incorpora un término de interacción entre las horas trabajadas por semana y el sexo del individuo. Desde la teoría económica, el llamado 'overwork premium' opera de forma asimétrica: en los hombres, trabajar muchas horas se asocia más fuertemente a ingresos altos que en las mujeres, quienes enfrentan mayores restricciones de disponibilidad horaria por la carga de trabajo no remunerado. Un modelo puramente aditivo asumiría que la pendiente de horas es idéntica para ambos sexos, supuesto que la evidencia empírica y la teoría cuestionan. La interacción permite que ese efecto varíe según el género.
+
+```{r}
+# Creamos variable categórica de jornada laboral
+census_data_nueva <- census_data_nueva |>
+  mutate(
+    jornada = case_when(
+      hours_per_week < 35                          ~ "Part-time",
+      hours_per_week >= 35 & hours_per_week <= 44  ~ "Full-time",
+      hours_per_week >= 45 & hours_per_week <= 59  ~ "Extendido",
+      hours_per_week >= 60                         ~ "Sobrecarga"
+    ) |> factor(levels = c("Part-time", "Full-time",
+                            "Extendido", "Sobrecarga"))
+  )
+
+# ----------------------------------------------------------
+# Gráfico de barras proporcional: jornada × ingreso, facetado por sexo
+p_interaccion_barras <- census_data_nueva |>
+  ggplot(aes(x = jornada, fill = factor(income_binaria))) +
+  geom_bar(position = "fill", alpha = 0.85, color = "white") +
+  facet_wrap(~ sex) +
+  scale_fill_manual(values = c("0" = "#4e79a7", "1" = "#f28e2b"),
+                    name   = "Ingreso",
+                    labels = c("0" = "<=50K", "1" = ">50K")) +
+  scale_y_continuous(labels = label_percent()) +
+  labs(
+    title    = "Proporción de ingresos >$50K según jornada laboral, separado por sexo",
+    subtitle = "¿Cambia el efecto de las horas trabajadas dependiendo del sexo?",
+    x        = "Tipo de jornada",
+    y        = "Proporción"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title           = element_text(face = "bold"),
+    axis.text.x          = element_text(angle = 20, hjust = 1),
+    panel.grid.major.x   = element_blank()
+  )
+
+p_interaccion_barras
+```
+
+```{r}
+# ----------------------------------------------------------
+# Gráfico de barras proporcional: jornada × ingreso
+p_jornadaxingreso <- census_data_nueva |>
+  ggplot(aes(x = jornada, fill = factor(income_binaria))) +
+  geom_bar(position = "fill", alpha = 0.85, color = "white") +
+  scale_fill_manual(values = c("0" = "#4e79a7", "1" = "#f28e2b"),
+                    name   = "Ingreso",
+                    labels = c("0" = "<=50K", "1" = ">50K")) +
+  scale_y_continuous(labels = label_percent()) +
+  labs(
+    title    = "Proporción de ingresos >$50K según jornada laboral",
+    subtitle = "",
+    x        = "Tipo de jornada",
+    y        = "Proporción"
+  ) +
+  theme_minimal(base_size = 14) +
+  theme(
+    plot.title           = element_text(face = "bold"),
+    axis.text.x          = element_text(angle = 20, hjust = 1),
+    panel.grid.major.x   = element_blank()
+  )
+
+p_jornadaxingreso
+```
+
+El análisis muestra que trabajar más horas está asociado con una mayor probabilidad de obtener ingresos superiores a USD 50.000, pero este efecto no es igual para hombres y mujeres. Por esta razón, resulta razonable incluir una interacción entre ambas variables en el modelo.
+
+En términos generales, a medida que aumenta la cantidad de horas trabajadas por semana, también aumenta la proporción de personas con ingresos altos. Sin embargo, al separar los datos por sexo se observa que esta relación sigue trayectorias diferentes. Tanto hombres como mujeres presentan porcentajes similares de ingresos altos cuando trabajan jornadas de tiempo parcial, cercanos al 20%. No obstante, a medida que la jornada laboral se extiende, la diferencia entre ambos grupos se vuelve cada vez más evidente. Entre los hombres, la proporción de personas con ingresos superiores a USD 50.000 aumenta de manera marcada, llegando a aproximadamente el 70% en las categorías de jornadas más largas. En cambio, entre las mujeres el incremento es más moderado, alcanzando alrededor del 45%. Esto implica que la brecha entre hombres y mujeres prácticamente no existe cuando se trabajan pocas horas, pero se amplía conforme aumenta la carga laboral. Estos resultados sugieren que el beneficio económico de trabajar más horas no es el mismo para ambos sexos. Si el modelo asumiera que las horas trabajadas tienen exactamente el mismo efecto para hombres y mujeres, estaría simplificando en exceso la realidad observada en los datos. Por ello, incorporar una interacción entre sexo y horas trabajadas permite capturar mejor estas diferencias y representar de forma más precisa cómo se relacionan ambas variables con la probabilidad de obtener ingresos elevados.
+
+# AJUSTE DE MODELOS (REGRESIÓN LÓGISTA):
+
+La eleccion de las variables de referencias se basa en el argumento de que en el caso de la educación, se toma como referencia el nivel más bajo (`educ_baja`), de modo que cada coeficiente refleje cuánto aumenta la probabilidad de ingresos altos a medida que el individuo asciende en su trayectoria educativa. De forma análoga, para la edad se toma como referencia el grupo más joven (`edad_joven`), lo que permite evaluar cómo evoluciona la probabilidad de pertenecer al estrato de altos ingresos a lo largo del ciclo laboral, a medida que el individuo acumula experiencia y antigüedad.
+
+En cuanto a las horas trabajadas, la referencia es la jornada *part-time*, que representa el punto de partida más bajo en términos de dedicación laboral. Esto permite observar con claridad el efecto incremental de trabajar jornadas más extensas sobre la probabilidad de ingresos altos, algo especialmente relevante dado que esta variable forma parte del término de interacción con el sexo.
+
+Para el estado civil, se toma como referencia la categoría `married` por ser la más frecuente en el dataset y porque la literatura económica la asocia consistentemente a mayores niveles de ingreso, lo que la convierte en un punto de comparación sustantivamente relevante.
+
+# MODELO BASE
+
+```{r}
+modelo_1 <- glm(
+  income_binaria ~
+    edad_adulto_joven +
+    edad_adulto +
+    edad_mayor +
+    educ_secundaria +
+    educ_terc_inc +
+    educ_universitaria +
+    educ_posgrado +
+    horas_full_time +
+    horas_extendido +
+    horas_sobrecarga +
+    never_married +
+    div_sep +
+    widowed_other +
+    sex,
+  family = binomial(link = "logit"),
+  data = census_data_nueva
+)
+
+# Revisamos el resumen del modelo con interacción
+summary(modelo_1)
+```
+
+# MODELO 2: 
+
+```{r}
+modelo_2 <- glm(
+  income_binaria ~
+    edad_adulto_joven +
+    edad_adulto +
+    edad_mayor +
+    educ_secundaria +
+    educ_terc_inc +
+    educ_universitaria +
+    educ_posgrado +
+    horas_full_time +
+    horas_extendido +
+    horas_sobrecarga +
+    never_married +
+    div_sep +
+    widowed_other +
+    sex +
+    sex*horas_full_time +
+    sex*horas_extendido +
+    sex*horas_sobrecarga,
+  family = binomial(link = "logit"),
+  data = census_data_nueva
+)
+
+summary(modelo_2)
+```
+
+> **Interpretando los resultados de los modelos**
+>
+> El **Modelo 1 (Base)** supone que el efecto de trabajar más horas es exactamente el mismo para hombres y mujeres. Bajo esta hipótesis, el género tiene un efecto fijo sobre la probabilidad de obtener ingresos superiores a USD 50.000, mientras que aumentar la cantidad de horas trabajadas produce el mismo impacto independientemente del sexo de la persona.
+>
+> Los resultados muestran que la educación es el factor más importante para explicar los ingresos altos: a medida que aumenta el nivel educativo, aumentan significativamente las probabilidades de superar el umbral de USD 50.000 anuales. También se observa que los adultos tienen mayores probabilidades de ingresos elevados que los jóvenes y que las personas casadas presentan una situación económica más favorable que quienes nunca se casaron, están divorciados o son viudos.
+>
+> El **Modelo 2 (Interactivo)** incorpora una interacción entre sexo y horas trabajadas. Esta especificación permite evaluar si el efecto de trabajar jornadas más extensas es diferente para hombres y mujeres. Los coeficientes de interacción resultan positivos y estadísticamente significativos en todos los casos, lo que indica que el retorno económico asociado a trabajar más horas es mayor para los hombres.
+>
+> Una diferencia importante entre ambos modelos es que, en el Modelo 1, ser hombre aparece asociado a una mayor probabilidad de ingresos altos. Sin embargo, cuando se incorpora la interacción en el Modelo 2, el efecto principal de ser hombre pasa a ser negativo, mientras que las interacciones son positivas. Esto sugiere que la ventaja observada para los hombres no es general, sino que surge principalmente entre quienes trabajan jornadas completas o extendidas.
+>
+> En otras palabras, el Modelo 2 muestra que la relación entre género e ingresos depende de la intensidad de trabajo. Mientras que el Modelo 1 asume un efecto uniforme para todos los individuos, el Modelo 2 revela que hombres y mujeres no reciben las mismas recompensas económicas por trabajar más horas. Por ello, la especificación interactiva ofrece una descripción más realista de cómo operan conjuntamente el género y la dedicación laboral en la determinación de los ingresos.
+
+# INTERPRETACIÓN DE RESULTADOS Y EFECTOS MARGINALES
+
+# EFECTOS MARGINALES PROMEDIO (AME): 
+
+```{r}
+
+# Efectos Marginales Promedio
+efectos_marginales <- avg_slopes(
+  modelo_2,
+  variables = c(
+    "edad_adulto_joven",
+    "edad_adulto",
+    "edad_mayor",
+    "educ_secundaria",
+    "educ_terc_inc",
+    "educ_universitaria",
+    "educ_posgrado",
+    "horas_full_time",
+    "horas_extendido",
+    "horas_sobrecarga",
+    "never_married",
+    "div_sep",
+    "widowed_other",
+    "sex"
+  ),
+  slope = "dydx"
+)
+
+# Tabla estética
+efectos_marginales |> 
+  
+  select(
+    term,
+    contrast,
+    estimate,
+    conf.low,
+    conf.high,
+    p.value
+  ) |> 
+  
+  mutate(
+    
+    estimate_pct = paste0(round(estimate*100,2), "%"),
+    
+    interpretacion = case_when(
+      estimate > 0 & p.value < 0.05 ~ "Aumenta prob. (Sig.)",
+      estimate < 0 & p.value < 0.05 ~ "Reduce prob. (Sig.)",
+      TRUE ~ "No significativo"
+    )
+    
+  ) |> 
+  
+  select(
+    term,
+    contrast,
+    estimate_pct,
+    conf.low,
+    conf.high,
+    p.value,
+    interpretacion
+  ) |> 
+  
+  rename(
+    `Predictor` = term,
+    `Contraste` = contrast,
+    `Efecto (Prob.)` = estimate_pct,
+    `IC Inferior` = conf.low,
+    `IC Superior` = conf.high,
+    `Valor p` = p.value,
+    `Interpretación` = interpretacion
+  ) |> 
+  
+  knitr::kable(
+    digits = 4,
+    caption = "Efectos Marginales Promedio (AME) - Modelo 2"
+  ) |> 
+  
+  kable_styling(
+    bootstrap_options = c(
+      "striped",
+      "hover",
+      "condensed",
+      "responsive"
+    ),
+    full_width = FALSE,
+    position = "center"
+  ) |> 
+  
+  row_spec(
+    row = which(efectos_marginales$p.value < 0.05),
+    bold = TRUE,
+    color = "black",
+    background = "#e6f2ff"
+  )
+```
+
+# GRÁFICO DE BOSQUE
+
+```{r}
+
+df_plot_or <- broom::tidy(modelo_2) |>
+  filter(!term %in% c("(Intercept)", "educ_posgrado", "never_married")) |>
+  mutate(
+    lo_80 = estimate - qnorm(0.90)  * std.error,
+    hi_80 = estimate + qnorm(0.90)  * std.error,
+    lo_95 = estimate - qnorm(0.975) * std.error,
+    hi_95 = estimate + qnorm(0.975) * std.error,
+    lo_99 = estimate - qnorm(0.995) * std.error,
+    hi_99 = estimate + qnorm(0.995) * std.error,
+    across(c(estimate, starts_with("lo_"), starts_with("hi_")), exp),
+    term_clean = case_match(
+      term,
+      "edad_adulto_joven"        ~ "Edad: Adulto joven",
+      "edad_adulto"              ~ "Edad: Adulto",
+      "edad_mayor"               ~ "Edad: Mayor",
+      "educ_secundaria"          ~ "Educación secundaria",
+      "educ_terc_inc"            ~ "Educación terciaria incompleta",
+      "educ_universitaria"       ~ "Educación universitaria",
+      "horas_full_time"          ~ "Horas: Full-time",
+      "horas_extendido"          ~ "Horas: Jornada extendida",
+      "horas_sobrecarga"         ~ "Horas: Sobrecarga",
+      "div_sep"                  ~ "Divorciado/Separado",
+      "widowed_other"            ~ "Viudo/Otro",
+      "sexMale"                  ~ "Hombre",
+      "horas_full_time:sexMale"  ~ "Interacción: Hombre × Full-time",
+      "horas_extendido:sexMale"  ~ "Interacción: Hombre × Extendido",
+      "horas_sobrecarga:sexMale" ~ "Interacción: Hombre × Sobrecarga",
+      .default = term
+    ),
+    sig = p.value < 0.05
+  )
+
+ggplot(df_plot_or, aes(y = reorder(term_clean, estimate), x = estimate)) +
+  geom_vline(xintercept = 1, linetype = "dashed", color = "gray40", linewidth = 0.8) +
+  geom_linerange(aes(xmin = lo_99, xmax = hi_99), color = "#74ADD1", linewidth = 1) +
+  geom_linerange(aes(xmin = lo_95, xmax = hi_95), color = "#4575B4", linewidth = 2.5) +
+  geom_linerange(aes(xmin = lo_80, xmax = hi_80), color = "#313695", linewidth = 5) +
+  geom_point(aes(color = sig), size = 3.5) +
+  scale_color_manual(values = c("TRUE" = "#D73027", "FALSE" = "gray50"), guide = "none") +
+  scale_x_log10(
+  breaks = c(0.2, 0.5, 1, 2, 5, 10),
+  labels = c("0.2", "0.5", "1", "2", "5", "10"),
+  limits = c(0.15, 11)
+  ) +
+  labs(
+    title    = "Odds Ratios del Modelo Logístico Interactivo",
+    subtitle = "Intervalos de confianza: 80% (gruesa), 95% (media), 99% (fina)\nPuntos rojos = significativo (p<0.05), grises = no significativo",
+    x        = "Odds Ratio (Escala Logarítmica)",
+    y        = NULL,
+    caption  = "Línea punteada: OR = 1 (ausencia de efecto).\nExcluidos por escala: educ_posgrado (OR ≈ 20) y never_married (OR ≈ 0.07)."
+  ) +
+  theme_minimal(base_size = 13) +
+  theme(
+    plot.title         = element_text(face = "bold", size = 15),
+    plot.subtitle      = element_text(size = 11, color = "gray30"),
+    panel.grid.minor   = element_blank(),
+    panel.grid.major.y = element_blank(),
+    axis.text.y        = element_text(face = "bold", size = 11),
+    axis.text.x        = element_text(size = 10)
+  )
+```
+
+# COMPARACIÓN GLOBAL DE MODELOS: 
+
+```{r}
+bind_rows(
+  broom::glance(modelo_1) |> mutate(Modelo = "1. Sin Interacción"),
+  broom::glance(modelo_2) |> mutate(Modelo = "2. Con Interacción")
+) |>
+  mutate(pseudo_r2 = 1 - (deviance / null.deviance)) |>
+  select(Modelo, null.deviance, deviance, pseudo_r2, AIC, nobs) |>
+  rename(
+    `Deviance Nula`        = null.deviance,
+    `Deviance Residual`    = deviance,
+    `Pseudo-R² (McFadden)` = pseudo_r2,
+    `Observaciones`        = nobs
+  ) |>
+  knitr::kable(
+    digits  = c(0, 1, 1, 3, 1, 0),
+    caption = "Métricas de Ajuste Global"
+  ) |>
+  kable_styling(
+    bootstrap_options = c("striped", "hover", "condensed", "responsive"),
+    full_width = FALSE,
+    position   = "center"
+  ) |>
+  row_spec(
+    row        = 2,
+    bold       = TRUE,
+    color      = "black",
+    background = "#e6f2ff"
+  )
+```
+
+> **Comparación del ajuste de los modelos**
+>
+> Para evaluar el desempeño de ambos modelos se compararon la Deviance Residual, el Pseudo-R² de McFadden y el AIC. En primer lugar, ambos modelos parten de la misma **Deviance Nula (21.820,6)**, ya que utilizan la misma variable dependiente y el mismo conjunto de observaciones.
+>
+> Al incorporar los predictores, la **Deviance Residual** disminuye considerablemente en ambos casos, lo que indica que las variables seleccionadas explican una parte importante de la variación en los ingresos. Sin embargo, el **Modelo 2**, que incorpora la interacción entre sexo y horas trabajadas, presenta una Deviance Residual ligeramente menor (13.808,2) que el Modelo 1 (13.845,1), señal de un mejor ajuste a los datos.
+>
+> El **Pseudo-R² de McFadden** también favorece al Modelo 2. Mientras que el Modelo 1 alcanza un valor de 0,366, el Modelo 2 obtiene 0,367. La mejora es pequeña, pero indica que la interacción aporta información adicional para explicar la probabilidad de obtener ingresos superiores a USD 50.000.
+>
+> Finalmente, el criterio más útil para comparar ambos modelos es el **AIC**, donde valores más bajos indican un mejor equilibrio entre ajuste y complejidad. El Modelo 2 presenta un AIC de **13.844,2**, inferior al del Modelo 1 (**13.875,1**), lo que implica una mejora de aproximadamente **31 puntos**. Como regla general, diferencias superiores a 10 puntos suelen considerarse evidencia fuerte a favor del modelo con menor AIC.
+>
+> En conjunto, estos resultados sugieren que el **Modelo 2 (Interactivo)** describe mejor los datos que el Modelo 1. Aunque la mejora en el poder explicativo es moderada, la interacción entre sexo y horas trabajadas contribuye de manera significativa a capturar patrones que el modelo base no logra representar, por lo que constituye la especificación preferida para el análisis.
