@@ -59,11 +59,6 @@ pacman::p_load(
 
 ```
 
-```{r}
-install.packages("modelsummary")
-install.packages("caret", dependencies = TRUE)
-```
-
 Cargamos los datos utilizando HERE.
 
 ```{r}
